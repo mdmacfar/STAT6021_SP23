@@ -1,0 +1,179 @@
+---
+title: "STAT Project 1 Part 3 - Model"
+author: "Michael Macfarlan"
+---
+
+```{r include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(MASS)
+data <- read.csv("diamonds4.csv", header=TRUE)
+head(data)
+```
+
+**Section 3: Fitting a Regression Model**
+
+[Link to Rmarkdown file]
+
+Next, we set out to fit a linear regression model with the help of R. The first step to complete this process is by visually inspecting a scatter plot of the predictor and response variables.
+
+```{r echo=FALSE}
+ggplot(data = data, aes(x = carat, y = price, color = clarity)) + 
+  geom_point() +
+  labs(title = "Scatter Plot of Carat vs Price Grouped by Clarity")
+```
+
+From the outset, this scatter plot looks like it's telling a story of positive correlation with Price increasing as Carat increases. But, what is also clear is that the relationship is not linear, and if we were to draw a line along the pattern of these points, the slope looks like it increases as the carat increases. In other words, it curves upwards. Because of this, we know that we will have to transform one or both variables.
+
+Now having that information, we took the first step to creating an accurate and useful regression model between the two variables. Knowing that the relationship does not look linear from the scatter plot, we hypothesized that a transformation may be necessary, but we started without any transformations so that we could assess which we may need to use.
+
+```{r echo=FALSE}
+model1 <- lm(price ~ carat, data = data)
+resid1 <- resid(model1)
+fitted_val1 <- fitted(model1)
+plot(fitted_val1, resid1, xlab = "Fitted Values", ylab = "Residuals")
+abline(h=0, col="red")
+```
+
+Based on this residual plot, we knew the residuals were creating a fan shape with variance increasing as x, or Carat, increased. Therefore, we started with a y transformation. We used the boxcox transformation to determine the amount of transformation.
+
+```{r echo=FALSE}
+boxcox(model1, lambda=seq(0,1,0.1))
+```
+
+The boxcox plot shows us that the lambda is close to zero, which indicates that transforming the response variable (y, or Price) with the natural logarithm may be useful.
+
+```{r echo=FALSE}
+data$log_price <- log(data$price)
+model2 <- lm(log_price ~ carat, data = data)
+resid2 <- resid(model2)
+fitted_val2 <- fitted(model2)
+plot(fitted_val2, resid2, xlab = "Fitted Values", ylab = "Residuals")
+abline(h=0, col="red")
+
+```
+
+This is a huge improvement to variance, but the average residual is not 0 as x increases, so we will also transform the x variable, or Carat, with the natural log.
+
+Another clue for using the natural log of x is by looking at the scatterplot of our model now that y alone has been transformed.
+
+```{r echo=FALSE}
+ggplot(data, aes(x = carat, y = log_price)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Log(Price) vs Carat", xlab = "Carat", ylab = "Log(Price)")
+
+```
+
+The pattern of the relationship is more clear, but is still not linear. We next transformed x (Carat) in addition to y (Price).
+
+```{r echo=FALSE}
+data$log_carat <- log(data$carat)
+model3 <- lm(log_price ~ log_carat, data = data)
+resid3 <- resid(model3)
+fitted_val3 <- fitted(model3)
+plot(fitted_val3, resid3, xlab = "Fitted Values", ylab = "Residuals")
+abline(h=0, col="red")
+```
+
+Upon fitting the new model, the residual plot is a clear improvement. This plot also visually satisfies regression assumptions. First, there exists a linear relation between the response and predictor variable. We can see this here in the residual plot as well as below in the scatter plot of the natural log of Carat vs the natural log of Price as seen below.
+
+```{r echo=FALSE}
+ggplot(data, aes(x = log_carat, y = log_price)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Log(Price) vs Log(Carat)", xlab = "Log(Carat)", ylab = "Log(Price)")
+
+```
+
+Second, the error terms have mean 0 because the data points are pretty evenly scattered around the line of x = 0 and seem to have no apparent pattern.
+
+Third, the error terms have the constant variance because the vertical variation of the data points is relatively constant across the axis.
+
+Fourth, the error terms are uncorrelated. The QQ plot below shows what seems to be showing a relatively normal distribution falling close to the diagonal qqline, although there is a bit of separation at the lowest and highest points of the chart.
+
+```{r echo=FALSE}
+qqnorm(resid3, main = "QQ Plot of Residuals")
+qqline(resid3)
+```
+
+Fifth and finally, the errors follow a normal distribution as we can see from the ACF plot below. The spike
+
+```{r echo=FALSE}
+acf(resid3, main = "ACF Plot of Residuals")
+```
+
+Visually, it looked like we have quite a performant model. Next, we assessed its statistical significance.
+
+```{r echo=FALSE}
+summary(model3)
+
+```
+
+From the model summary information, we know that the F-statistic is 2.553e+04 and the p-value is \< 2.2e-16 indicating statistical significance. We also know that the R-squared value is 0.9547, meaning that 95.47% of the variability can be explained by the model, indicating a very strong relationship.
+
+We determined that we had a performant model. Now, we can represent that model in an equation. The least squares regression equation for this regression model would be:
+
+log(price) = 8.52 + 1.94 \* log(carat)
+
+In our equation, 8.52 is our y-intercept and 1.94 is our predictor coefficient.
+
+Since we transformed both variables, it's difficult to simplify the relationship between these variables in a simple and easy-to-understand concept between the predictor and response variable. We are able to say that the equation is indicating that there is a positive relationship between the log-transformed carat weight and the log-transformed price. **Another way to say this is that as the carat weight of a diamond increases, so does the price, but on a logarithmic scale.**
+
+To be more specific, if we consider:
+
+log $\hat{y}$ = $\hat{\beta}$ ~0~ + $\hat{\beta}$ ~1~ log x
+
+[more math]
+
+
+
+
+
+[h0 ha hyp test?]
+
+see notes: if log transformation, can't really talk about coefficients, "y is multiplied by a certain factor"
+
+------------------------------------------------------------------------
+
+Remember this: [Understanding Diagnostic Plots](https://data.library.virginia.edu/diagnostic-plots/#:~:text=In%20this%20post%2C%20I%E2%80%99ll%20walk%20you%20through%20built-in,to%20an%20lm%20object%20after%20running%20an%20analysis.)
+
+notes/testing/etc, etc, etc
+
+We can then simplify this further to:
+
+price = e\^(8.52 + 1.94\*log(carat))
+
+or:
+
+carat = e\^((log(price) - 8.52) / 1.94)
+
+```{r}
+test1 <- 8.52 + 1.94 * log(1)
+test2 <- 8.52 + 1.94 * log(2)
+test3 <- 8.52 + 1.94 * log(3)
+```
+
+```{r}
+x_values <- seq(0.1, 10, 0.1)
+y_values <- log(x_values)
+datatest <- data.frame(x = x_values, y = y_values)
+ggplot(datatest, aes(x = x, y = y)) +
+  geom_line(color = "blue") +
+  labs(title = "y = log(x)", x = "x", y = "log(x)")
+```
+
+------------------------------------------------------------------------
+
+use soemthing like this?
+
+```{r}
+# create a regression line plot for the model
+library(ggplot2)
+ggplot(data = swiss, aes(x = Education, y = Fertility)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+
+```
