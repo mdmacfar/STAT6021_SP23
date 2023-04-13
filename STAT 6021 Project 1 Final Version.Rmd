@@ -1,0 +1,334 @@
+---
+title: "STAT 6021 Project 1 Final Version"
+author: "Group 5 Michael Macfarian, Ran Gao, Brittny Hopwood, Maria Liu"
+date: "2023-03-25"
+header-includes:
+   - \usepackage{soul, color}
+   - \usepackage{xcolor}
+   - \definecolor{turquoise}{RGB}{1, 171, 193}
+   - \definecolor{seafoam}{RGB}{2, 239, 192}
+output: html_document
+---
+
+# 1. Summary of Analysis
+
+A panel was formed to assess current Blue Nile diamond prices and to consider how the use of statistical techniques can verify the claims and assess the pricing of more than 1,000 different diamonds currently listed for sale on the Blue Nile website. The industry standard for evaluating diamonds is based on four essential characteristics, known as the 4Cs, which include carat weights, clarity, color, and cut. Focusing on any single characteristic alone can result in overpricing or underpricing a diamond. Therefore, finding a balance between the 4C's is essential when pricing a diamond. Data visualizations were employed by the panel to explore how the four essential characteristics impact price, as well as the relationship, if any, between the 4C's.
+
+Diamond color affects the value and overall appearance of a diamond, which is graded from D (colorless) to Z (light yellow or brown). A colorless diamond is the most valuable, as it allows for better light reflection, producing more sparkle. Analysis of color grades reveals that the higher the color grade, the higher the price of the diamond. This is consistent with the fact that colorless diamonds are more rare and valuable. However, there may be other factors such as cut, clarity, and carat weight that can also impact diamond prices.
+
+Diamond clarity refers to the presence of inclusions or blemishes, with lower clarity grades having more visible inclusions. Our analysis shows that as the clarity of the diamond increases, the price also increases. This trend is consistent across all cuts of diamonds in the dataset, with higher clarity grades commanding higher prices.
+
+Diamond carat is determined by the weight of the rough crystal, and is the most impactful factor on the price of the diamond---a Blue Nile claim supported by our analysis. As diamond carat increases for a particular quality, so does rarity and price. Prices increases at an accelerating rate with increases in carat weight, compounding the total price for larger stones.
+
+Diamond cut is also important, as it affects the diamond's ability to reflect light and sparkle. Blue Nile claims that the cut of the diamond can also be the biggest factor in price determination, and while our data doesn't support that cut is the single largest factor in price, the value of the diamond does increase as quality of the cut increases. Blue Nile claims the Ideal cut diamond and the super-ideal Astor by Blue Nile are the most expensive diamond cuts; however, analysis of the dataset reveals the relationships between price and clarity may be more complex than this.
+
+By examining the 4Cs and how they relate to the price, we gained valuable insights into what factors truly influence the value of a diamond. Our analysis revealed that all four factors, carat, cut, clarity, and color, influence a diamond's price. Further, we support Blue Nile's website claims that larger diamonds tend to be more expensive, as do diamonds with higher cut grades. When determining price, carat weight of the diamond is the most important factor, followed by the color, clarity, then cut.
+
+The most critical finding of the panel is the strong relationship between price and carat weight. Put simply, our findings indicate that as the carat weight of a diamond increases, so does the price, but on a logarithmic scale. More specifically, for every 1% increase in the carat of the diamond, the predicted price increases by about 1.94%
+
+Understanding this relationship between price and carat can be helpful in a number of ways, such as accurately predicting the value of diamonds with limited information, helping to verify marketing copy and understand relationships of diamond qualities in your marketplace, help identify diamonds that are significantly over- or underpriced, and validating or assessing your pricing strategy. This model suggests that pricing is based on carat. Is this too simplistic a model to employ? There may be a business case to assess if Blue Nile is undercharging or overcharging based on your company's expertise. Our model can be an extremely powerful tool if taken advantage of properly.
+
+```{r, include=FALSE}
+install.packages("corrplot", repos = "http://cran.us.r-project.org")
+library(tidyverse)
+library(ggplot2)
+library(MASS)
+library(RColorBrewer)
+library(dplyr)
+library(corrplot)
+#options(repos = c(CRAN = "https://cloud.r-project.org/"))
+data <- read.csv("diamonds4.csv", header=TRUE)
+head(data)
+```
+
+```{r, include=FALSE}
+data <- read.csv("diamonds4.csv", header=TRUE)
+head(data)
+```
+
+# 2. Analysis of Diamond Price Based on Carat, Clarity, Color, and Cut in R
+
+Diamonds are evaluated based on four essential characteristics, known as the 4Cs, which include carat weights, clarity, color, and cut. Carat weight is determined by the size of the rough crystal, and it affects the price of the diamond. However, focusing on carat weight alone can result in paying more for a lower-quality diamond. So, finding a balance between the 4Cs is essential when purchasing a diamond. By examining the 4Cs of each diamond and how they relate to the price, we can gain valuable insights into what factors influence the value of a diamond.
+
+Diamond clarity refers to the presence of inclusions or blemishes, with lower clarity grades having more visible inclusions. The size, number, position, nature, and color of inclusions all play a role in determining the clarity grade. It's important to note that surface flaws are called blemishes, while internal defects are known as inclusions. However, most inclusions cannot be seen with the naked eye, and diamonds with fewer and smaller inclusions receive higher clarity grades.
+
+Diamond color affects the value and overall appearance of a diamond. The GIA color scale grades diamonds from D (colorless) to Z (light yellow or brown). A colorless diamond is the most valuable, as it allows for better light reflection, producing more sparkle. Fancy-colored diamonds, which come in various shades such as blue, green, and pink, are graded separately and can be more valuable than colorless diamonds due to their rarity.
+
+Diamond cut is also important, as it affects the diamond's ability to reflect light and sparkle. Blue Nile offers four different cut grades, with Ideal being the rarest and most reflective. Splurging on cut can be more important than carat weight, and buying slightly below whole and half-carat marks can save you money while still appearing nearly identical.
+
+Overall, finding a balance between the 4Cs is crucial in determining the quality and value of a diamond. It's important to remember that carat weight is not the sole indicator of a diamond's quality, and that factors such as cut, clarity, and color can have just as much of an impact on its value.
+
+The steps are as follows:
+
+-   Import required packages and load the dataset
+
+-   Perform the exploratory data analysis
+
+-   Fit a simple linear regression model for price against carat.
+
+-   Model diagnostics in simple linear regression
+
+-   Conclusion
+
+```{r, include=FALSE}
+diamonds <- read_csv("diamonds4.csv")
+```
+
+```{r, include=FALSE}
+dim(diamonds)
+```
+
+Check the missing values with is.null() function. It shows there is no missing data in the dataset.
+
+```{r,echo=FALSE,}
+# check missing data
+is.null(diamonds) 
+```
+
+```{r,echo=FALSE}
+
+# Convert the cut, clarity, and color variables to factors
+diamonds$cut <- factor(diamonds$cut)
+diamonds$clarity <- factor(diamonds$clarity)
+diamonds$color <- factor(diamonds$color)
+
+# Display the summary of the diamonds dataset
+summary(diamonds)
+```
+
+For the categorical variables in the dataset (cut, color, and clarity), we can see a frequency count of each value from the summary above.
+
+For example, for the cut variable:
+
+Astor Ideal: This value occurs 20 times.
+
+Good: This value occurs 73 times.
+
+Ideal: This value occurs 739 times.
+
+Very Good: This value occurs 382 times.
+
+To explore how price is related to the other variables (carat, clarity, color, cut), as well as how the other variables may relate to each other:
+
+## Scatter Plot of Price vs. Carat by Cut:
+
+```{r,echo=FALSE }
+# Create scatterplot of Price vs. Carat by Cut
+ggplot(data = diamonds, aes(x = carat, y = price, color = cut)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE,color = "pink") +
+  labs(x = "Carat", y = "Price", color = "Cut")
+```
+
+The scatterplot of Price vs. Carat by Cut shows the relationship between diamond price and carat weight, separated by the four different cut categories: Astor ideal,Good,ideal and Very Good. Overall, there is a positive relationship between price and carat weight, meaning that as carat weight increases, so does the price. However, within each cut category, there is some variation in this relationship,because higher cut quality requires more rough material removal and leads to higher prices.
+
+## Bar Chart of Price vs. Clarity by Cut:
+
+```{r,echo=FALSE}
+ggplot(data = diamonds, aes(x = clarity, y = price, fill = cut)) +
+  geom_bar(stat = "summary", fun = "median") +
+  labs(x = "Clarity", y = "Median Price", fill = "Cut")
+```
+
+Diamond clarity is one of the 4Cs that are used to determine the quality and value of a diamond. Clarity refers to the presence of inclusions or blemishes, which are graded on a scale ranging from Included (I1, I2, I3) to Slightly Included (SI1, SI2), Very Slightly Included (VS1, VS2), Very Very Slightly Included (VVS1, VVS2), Internally Flawless (IF), and Flawless (FL).
+
+The barplot of Price vs. Clarity by Cut shows that as the clarity of the diamond increases, the median price also increases. This trend is consistent across all cuts of diamonds, with higher clarity grades commanding higher prices.Additionally, it is evident that the median price of diamonds with Very Slightly Included (VS) clarity grade is generally higher than diamonds with Slightly Included (SI) grade, and so on. The clarity of a diamond is important because it can significantly affect the diamond's appearance and sparkle.
+
+## Boxplot of Price vs. Cut by Clarity:
+
+```{r,echo=FALSE }
+# Create boxplot of Price vs. Cut with Color by Clarity
+ggplot(data = diamonds, aes(x = cut, y = price, color = clarity)) +
+  geom_boxplot() +
+  labs(x = "Cut", y = "Price", color = "Clarity")
+```
+
+Based on the data visualization of Price vs. Cut by Clarity, we can see that diamonds with higher clarity grades generally have higher prices within each cut category. Additionally, the price range for diamonds in the Ideal and Very Good cut categories is much wider compared to the Good and Astor ideal categories. This suggests that investing in a higher quality cut can have a significant impact on the overall price of the diamond, and that the clarity grade can also influence the price within each cut category. It's important to consider both the cut and clarity of a diamond when making a purchase, as they both contribute to the diamond's beauty and value.
+
+One notable finding that stands out on the boxplot are diamonds with flawless clarity and a very good cut. The reason for the standout visibility of this particular boxplot is that there are only two existing observations within this grouping.
+
+## Boxplot of Price vs. Color by Cut:
+
+```{r,echo=FALSE}
+ggplot(diamonds, aes(x = color, y = price)) +
+  geom_boxplot(fill = "lightblue", alpha = 0.4) +
+  labs(x = "Color", y = "Price")
+```
+
+The boxplot for Price vs. Color shows that the higher the color grade, the higher the price of the diamond. This is consistent with the fact that colorless diamonds are rarer and more valuable. However, there may be other factors such as cut, clarity, and carat weight that can also impact diamond prices.
+
+## Scatter Plot Matrix of Carat, Clarity, Color, Cut and Price:
+
+```{r,echo=FALSE }
+# Create scatterplot matrix
+
+ggplot(diamonds, aes(x = carat, y = price, color = color)) +
+  geom_point() +
+  facet_grid(cut ~ clarity) +
+  ggtitle("Scatterplot Matrix of Carat, Clarity, Color, Cut and Price") +
+  labs(x = "Carat", y = "Price", color = "Color")
+```
+
+The scatterplot matrix shows the relationships between four factors, carat, clarity, color, and cut, with respect to the price of diamonds. Each panel in the matrix displays a scatterplot of one factor with respect to another, with the points colored based on the price of the diamond.
+
+```{r, include=FALSE}
+# convert clarity color and cut to num. Low quality  = low number
+data$clarity_num <- recode(data$clarity, "I1" = 1, "SI1" = 2, "SI2" = 3, "VS1" = 4, "VS2" = 5, "VVS1" = 6, "VVS2" = 7, "IF" = 8, "FL" = 9)
+data$color_num <- recode(data$color, "K" = 1, "J" = 2, "I" = 3, "H" = 4, "G" = 5, "F" = 6, "E" = 7, "D" = 8)
+data$cut_num <- recode(data$cut, "Good" = 1, "Very Good" = 2, "Ideal" = 3, "Astor Ideal" = 4)
+# convert price
+data$price_num <- as.numeric(as.integer(data$price))
+```
+
+If we convert the categorical observations to numerical values associated with quality, setting low numbers for lower quality features and scaling to higher numbers for higher quality features, we get the following correlation plot. This plot provides evidence that the strongest regression relationship to pursue is that of Price vs Carat.
+
+```{r, echo=FALSE}
+num_data <- data[, c("price_num", "carat", "clarity_num", "color_num", "cut_num")]
+corrplot(cor(num_data))
+```
+
+# 3. Conclusion
+
+Now that we know that carat is the variable that has the strongest relationship with price, we set out to fit a linear regression model with the help of R. The first step to complete this process is by visually inspecting a scatter plot of the predictor (carat weight) and response variable (price).
+
+```{r echo=FALSE}
+ggplot(data = data, aes(x = carat, y = price, color = clarity)) + 
+  geom_point() +
+  labs(title = "Scatter Plot of Carat vs Price Grouped by Clarity")
+```
+
+```{r, include=FALSE}
+ggplot(data = data, aes(x = carat, y = price, color = cut)) + 
+  geom_point() +
+  labs(title = "Scatterplot of Carat vs Price Grouped by Cut")
+```
+
+From the outset, this scatter plot looks like it's telling a story of positive correlation with Price increasing as Carat increases. But, what is also clear is that the relationship is not linear, and if we were to draw a line along the pattern of these points, the slope looks like it increases as the carat increases. In other words, it curves upwards. Because of this, we know that we will have to transform one or both variables.
+
+Now having that information, we took the first step to creating an accurate and useful regression model between the two variables. Knowing that the relationship does not look linear from the scatter plot, we hypothesized that a transformation may be necessary, but we started without any transformations so that we could assess which we may need to use.
+
+```{r echo=FALSE}
+model1 <- lm(price ~ carat, data = data)
+resid1 <- resid(model1)
+fitted_val1 <- fitted(model1)
+plot(fitted_val1, resid1, xlab = "Fitted Values", ylab = "Residuals")
+abline(h=0, col="red")
+```
+
+Based on this residual plot of the fitted linear model with x being Carat and y being Price (Price = $\hat{\beta}$ ~0~ + $\hat{\beta}$ ~1~ \* Carat), we knew the residuals were creating a fan shape with variance increasing as x, or Carat, increased. Therefore, we started with a y transformation. We used the boxcox transformation to determine the amount of transformation.
+
+```{r echo=FALSE}
+boxcox(model1, lambda=seq(0,1,0.1))
+```
+
+The boxcox plot shows us that the lambda is close to zero, which indicates that transforming the response variable (y, or Price) with the natural logarithm may be useful. We fitted a new model as such: Log(Price) = $\hat{\beta}$ ~0~ + $\hat{\beta}$ ~1~ \* Carat
+
+```{r echo=FALSE}
+data$log_price <- log(data$price)
+model2 <- lm(log_price ~ carat, data = data)
+resid2 <- resid(model2)
+fitted_val2 <- fitted(model2)
+plot(fitted_val2, resid2, xlab = "Fitted Values", ylab = "Residuals")
+abline(h=0, col="red")
+
+```
+
+This is a huge improvement to variance, but the average residual is not 0 as x increases, so we will also transform the x variable, or Carat, with the natural log. Another clue for using the natural log of x is by looking at the scatterplot of our model now that y alone has been transformed.
+
+```{r, echo=FALSE}
+ggplot(data, aes(x = carat, y = log_price)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Log(Price) vs Carat", xlab = "Carat", ylab = "Log(Price)")
+
+```
+
+The pattern of the relationship is more clear, but is still not linear. We next transformed x (Carat) in addition to y (Price) by fitting a new model as such: Log(Price) = $\hat{\beta}$ ~0~ + $\hat{\beta}$ ~1~ \* Log(Carat)
+
+```{r echo=FALSE}
+data$log_carat <- log(data$carat)
+model3 <- lm(log_price ~ log_carat, data = data)
+resid3 <- resid(model3)
+fitted_val3 <- fitted(model3)
+plot(fitted_val3, resid3, xlab = "Fitted Values", ylab = "Residuals")
+abline(h=0, col="red")
+```
+
+Upon fitting the new model, the residual plot is a clear improvement. This plot also visually satisfies regression assumptions. First, there exists a linear relation between the response and predictor variable. We can see this here in the residual plot as well as below in the scatter plot of the natural log of Carat vs the natural log of Price as seen below.
+
+```{r echo=FALSE}
+ggplot(data, aes(x = log_carat, y = log_price)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Log(Price) vs Log(Carat)", xlab = "Log(Carat)", ylab = "Log(Price)")
+
+```
+
+Second, the error terms have mean 0 because the data points are pretty evenly scattered around the line of x = 0 and seem to have no apparent pattern.
+
+Third, the error terms have the constant variance because the vertical variation of the data points is relatively constant across the axis.
+
+Fourth, the error terms are uncorrelated. The QQ plot below shows what seems to be showing a relatively normal distribution falling close to the diagonal qqline, although there is a bit of separation at the lowest and highest points of the chart.
+
+```{r echo=FALSE}
+qqnorm(resid3, main = "QQ Plot of Residuals")
+qqline(resid3)
+```
+
+Fifth and finally, the errors follow a normal distribution as we can see from the ACF plot below.
+
+```{r echo=FALSE}
+acf(resid3, main = "ACF Plot of Residuals")
+```
+
+Visually, it looked like we have quite a high-performing model. Next, we assessed its statistical significance. We can make our assessment with information from the model summary in R.
+
+```{r echo=FALSE}
+summary(model3)
+
+```
+
+We put our model through a regression test to assess it more fully. The null and alternative hypothesis for each coefficient was as follows:
+
+H~0~: β1 = 0, H~A~: β1 ≠ 0
+
+H~0~: β2 = 0, H~A~: β2 ≠ 0
+
+From the model summary information, we know that both coefficients have very small p-values (p\<0.001) which indicated a rejection of each null hypothesis for the coefficient estimates, confirming a significant relationship between log(price) and log(carat).
+
+We also know that the F-statistic is 2.553e+04 and the p-value is \< 2.2e-16 indicating statistical significance. Finally, we can see that the R-squared value is 0.9547, meaning that 95.47% of the variability can be explained by the model, indicating a very strong relationship.
+
+We determined that we had a high-performing model. Now, we can represent that model in an equation. The least squares regression equation for this regression model would be:
+
+log(price) = 8.52 + 1.94 \* log(carat)
+
+In our equation, 8.52 is our y-intercept and 1.94 is our predictor coefficient.
+
+Since we transformed both variables, we need to consider how to simplify the relationship between these variables in a simple and easy-to-understand concept between the predictor and response variable. We are able to say that the equation is indicating that there is a positive relationship between the log-transformed carat weight and the log-transformed price. Another way to say this is that as the carat weight of a diamond increases, so does the price, but on a logarithmic scale.
+
+To be more specific, if we consider:
+
+log $\hat{y}$ = $\hat{\beta}$ ~0~ + $\hat{\beta}$ ~1~ log x
+
+When the predictor variable increases by 10%, the equation above becomes:
+
+log $\hat{y}$~new~ = $\hat{\beta}$ ~0~ + $\hat{\beta}$ ~1~ log (1.1x)
+
+Therefore, we know:
+
+log $\hat{y}$~new~ - log $\hat{y}$ = $\hat{\beta}$ ~1~ log (1.1x)
+
+Which simplifies to:
+
+$\hat{y}$~new /~ $\hat{y}$ = (1.1)\^$\hat{\beta}$ ~1~
+
+This means that for every z% increase in the predictor, the predicted response is multiplied by (1 + z / 100)\^$\hat{\beta}$ ~1~ In this scenario, this means that for every 1% increase in the carat of the diamond, the predicted price increases by about 1.94%
+
+As stated in the Executive Summary, making use of this regression equation and relationship between price and carat can be helpful in a number of ways.
+
+1.  Predict the value of diamonds with limited information. Since we know that the price of a diamond is related to it's carat weight, we can predict diamond prices with relative accuracy by only its carat weight.
+2.  Verify marketing copy and understand relationships of diamond qualities in your marketplace.
+3.  Help identify outliers. This can help identify diamonds that are significantly overpriced or underpriced.
+4.  Validate your pricing or assess pricing for changes. This model suggests that pricing is largely based on carat. Is this too simplistic a model to employ? There may be a business case to assess if Blue Nile is undercharging or overcharging based on your company's expertise.
+
+In conclusion, the regression model that we've fitted between the natural logarithm of the price and the natural logarithm of the carat is a high-performing model. It is statistically significant and explains 95.47% of the variability in the data, indicating a very strong relationship. This model can be an extremely powerful tool if taken advantage of properly.
